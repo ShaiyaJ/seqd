@@ -1,23 +1,6 @@
 // Seqd header-only implementation 
 // Seqd (sequence-display) aims to be a simple library to display text with 
 // graphics using only ANSI escape sequences.
-//
-// AIMS (u - untested, x - finished/see docs) 
-// [u] Set and unset raw mode
-// [u] Display text in...
-//      [u] Colour (16)
-//      [u] Colour (256)
-//      [u] Colour (true/rgb)
-//      [u] Bold / Italic / Underline / Strikethrough / Blinking
-// [] Input
-//      [u] Get a character
-//      [u] Get a line
-//          [u] with deliminator
-//          [u] with max_size
-//      [u] Raw keyboard input
-//      [ ] Raw mouse input
-// [u] Read console size
-// [u] Read cursor position
 
 #ifndef SEQD_H
 #define SEQD_H 
@@ -46,9 +29,6 @@
 // specific behaviour. They make use of #ifdef _WIN32 to distinguish         //
 // environments that are running Windows.                                    //
 //                                                                           //
-// Functions marked with a "#" have some kind of macro definition which      //
-// is expanded upon in the comment.                                          //
-//                                                                           //
 // Below this are two sets of definitions, these are also useful to know.    //
 // They were placed under the docs for clarity in code. However, from the    //
 // perspective of a reference it makes more sense to put them above the      //
@@ -76,7 +56,7 @@ static inline char* ctos(char c);                                       // Conve
 // Input
 static inline char keypress();                                          // *Reads a single character from the keyboard
 
-static inline char* get_input(int max_size);                         // Get line of input from the user (until you hit '\n') and return upto the maximum amount of characters
+static inline char* get_input(int max_size);                            // Get line of input from the user (until you hit '\n') and return upto the maximum amount of characters
 
 
 // Output
@@ -92,8 +72,7 @@ static inline void null_terminated_immediates(const char* first, ...);  // Varia
 
 
 // Cursor manipulation
-int get_terminal_width();                                               // Returns the width of the terminal in characters, requires raw mode
-int get_terminal_height();                                              // Returns the height of the terminal in characters, requires raw mode
+int get_terminal_size(int* width, int* height);                         // Returns the width of the terminal in characters, requires raw mode
     
 // Setting terminal "raw mode"
 static inline void set_raw_mode();                                      // *Turns on terminal raw mode - in this mode you can perform non-blocking reads on the keyboard
