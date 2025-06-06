@@ -21,6 +21,30 @@
     #include <unistd.h>
 #endif
 
+// Utility functions
+static inline char* ctos(char c) {      // char to string (null terminated char*)
+    char* s = (char*) malloc(2);
+
+    if (s == NULL)
+        return NULL;
+    
+    s[0] = c;
+    s[1] = '\0';
+    return s;
+}
+
+static inline const char* ansi_argd_seq(char* fmt, ...) {   // Takes a format and argument list to match to an escape sequence
+    // Get args
+    va_list args;
+    va_start(args, fmt);
+
+    // Write to buffer
+    static char buf[32];
+
+    vsnprintf(buf, 32, fmt, args);   
+    return buf;
+}
+
 ///////////////////////////////////// Docs //////////////////////////////////// 
 // Some reference documentation for you. Most of the functions do exactly as //
 // they say on the tin.                                                      //
@@ -35,14 +59,14 @@
 // functions.                                                                //
 ///////////////////////////////////////////////////////////////////////////////
 
-// Global variables
+// Global variables                                                     // If you do not use seqd for your entire program, you may want to free() these at some point.
 char* seqdbuf = NULL;                                                   // For use in display and buffered commands
 unsigned int seqdbuf_size = 0;                                          // For use in display and buffered commands
-char* seqdibuf = NULL;                                                  // For use in input buffers;
+char* seqdibuf = NULL;                                                  // For use in input buffers 
 bool seqdraw = false;                                                   // For use in set/unset raw mode and keypress
 
-#ifdef _WIN32
-    DWORD seqdmode;                                                     // For use in set/unset raw mode
+#ifdef _WIN32                                                           // These are for use in set/unset_raw_mode, they are platform specific
+    DWORD seqdmode;
 #else
     struct termios seqdterm;
 #endif
@@ -55,24 +79,22 @@ static inline char* ctos(char c);                                       // Conve
 
 // Input
 static inline char keypress();                                          // *Reads a single character from the keyboard
-
 static inline char* get_input(int max_size);                            // Get line of input from the user (until you hit '\n') and return upto the maximum amount of characters
 
 
 // Output
 static inline void display();                                           // Display everything stored in the buffer
-
 static inline char* buffer(const char* sequence);                       // Buffered commands until display is called - sequence must be null terminated
 static inline void null_terminated_buffers(const char* first, ...);     // Variable arguments that are NULL terminated
-//MACRO queue(x)      null_terminated_buffers(##x, NULL)                // Macro to call null_termianted_buffers with trailing NULL
-                                                                        // 
+/* MACRO queue(x)      null_terminated_buffers(##x, NULL) */            // Macro to call null_termianted_buffers with trailing NULL
+
 static inline void immediate(const char* sequence);                     // Immediate flushing
 static inline void null_terminated_immediates(const char* first, ...);  // Variable arguments that are NULL terminated
-//MACRO execute(...)                                                    // Macro to call null_termianted_buffers with trailing NULL
+/* MACRO execute(...) */                                                // Macro to call null_termianted_buffers with trailing NULL
 
 
 // Cursor manipulation
-int get_terminal_size(int* width, int* height);                         // Returns the width of the terminal in characters, requires raw mode
+static inline void get_terminal_size(int* width, int* height);                         // Returns the width of the terminal in characters, requires raw mode
     
 // Setting terminal "raw mode"
 static inline void set_raw_mode();                                      // *Turns on terminal raw mode - in this mode you can perform non-blocking reads on the keyboard
@@ -86,7 +108,11 @@ static inline void unset_raw_mode();                                    // *Turn
 #endif
 
 #ifndef SEQD_MAX_BUFFER_SIZE
-#define SEQD_MAX_SEQ_SIZE 1024                                          // Decides maximum input size for certain functions
+#define SEQD_MAX_BUFFER_SIZE 1024                                       // Decides maximum input size for certain functions
+#endif
+
+#ifndef SEQD_KEYBOARD_TIMEOUT
+#define SEQD_KEYBOARD_TIMEOUT 100                                       // Maxmimum milliseconds that nonblocking keypress() polls for
 #endif
 
 //////////////////////////////// ANSI constants /////////////////////////////// 
@@ -98,43 +124,29 @@ static inline void unset_raw_mode();                                    // *Turn
 #define SEQD_ESC                    "\033["
 #define SEQD_RESET                  SEQD_ESC "0m"
 
-#define MAKE_SEQ_FUNC(name, fmt, ...)                    \
-    static inline const char* name(__VA_ARGS__) {        \ // TODO: investigate "implicit int" warning
-        static char buf[32];                             \
-        snprintf(buf, sizeof(buf), fmt, __VA_ARGS__);    \
-        return buf;                                      \
-    }
-
-/*
-static inline const char* name args {
-    static char buf[32]; 
-    snprintf(buf, sizeof(buf), fmt, fmt_args); 
-    return buf;
-}
-*/
 
 // Cursor commands
 #define SEQD_CURPOS                 SEQD_ESC "6n"
 #define SEQD_HIDECUR                SEQD_ESC "?25l" 
 #define SEQD_SHOWCUR                SEQD_ESC "?25h" 
 
-MAKE_SEQ_FUNC(SEQD_SETCUR,         "\033[%d;%dH",     row, col)
-MAKE_SEQ_FUNC(SEQD_CUR_UP,         "\033[%dA",        n)
-MAKE_SEQ_FUNC(SEQD_CUR_DOWN,       "\033[%dB",        n)
-MAKE_SEQ_FUNC(SEQD_CUR_FORWARD,    "\033[%dC",        n)
-MAKE_SEQ_FUNC(SEQD_CUR_BACKWARD,   "\033[%dD",        n)
-MAKE_SEQ_FUNC(SEQD_CUR_NEXT_LINE,  "\033[%dE",        n)
-MAKE_SEQ_FUNC(SEQD_CUR_PREV_LINE,  "\033[%dF",        n)
-MAKE_SEQ_FUNC(SEQD_CUR_HORIZONTAL, "\033[%dG",        n)
+static inline const char* SEQD_SETCUR(int row, int col ) {return ansi_argd_seq("\033[%d;%dH", row, col);}
+static inline const char* SEQD_CUR_UP(int n)             {return ansi_argd_seq("\033[%dA",    n       );}
+static inline const char* SEQD_CUR_DOWN(int n)           {return ansi_argd_seq("\033[%dB",    n       );}
+static inline const char* SEQD_CUR_FORWARD(int n)        {return ansi_argd_seq("\033[%dC",    n       );}
+static inline const char* SEQD_CUR_BACKWARD(int n)       {return ansi_argd_seq("\033[%dD",    n       );}
+static inline const char* SEQD_CUR_NEXT_LINE(int n)      {return ansi_argd_seq("\033[%dE",    n       );}
+static inline const char* SEQD_CUR_PREV_LINE(int n)      {return ansi_argd_seq("\033[%dF",    n       );}
+static inline const char* SEQD_CUR_HORIZONTAL(int n)     {return ansi_argd_seq("\033[%dG",    n       );}
 
 // Console commands
 #define SEQD_CLEAR                  SEQD_ESC "2J"
 
-MAKE_SEQ_FUNC(SEQD_SCROLL_UP,      "\033[%dS",        n)
-MAKE_SEQ_FUNC(SEQD_SCROLL_DOWN,    "\033[%dT",        n)
+static inline const char* SEQD_SCROLL_UP(int n)          {return ansi_argd_seq("\033[%dS",    n       );}
+static inline const char* SEQD_SCROLL_DOWN(int n)        {return ansi_argd_seq("\033[%dT",    n       );}
 
-MAKE_SEQ_FUNC(SEQD_ERASE_DISPLAY,  "\033[%dJ",        n)
-MAKE_SEQ_FUNC(SEQD_ERASE_LINE,     "\033[%dK",        n)
+static inline const char* SEQD_ERASE_DISPLAY(int n)      {return ansi_argd_seq("\033[%dJ",    n       );}
+static inline const char* SEQD_ERASE_LINE(int n)         {return ansi_argd_seq("\033[%dK",    n       );}
 
 // Text styles
 #define SEQD_BOLD                   SEQD_ESC "1m"
@@ -156,17 +168,16 @@ MAKE_SEQ_FUNC(SEQD_ERASE_LINE,     "\033[%dK",        n)
 #define SEQD_RESET_CROSSED_OUT      SEQD_ESC "29m"
 
 // Colour functions
-MAKE_SEQ_FUNC(SEQD_FG_7,           "\033[3%dm",       col)
-MAKE_SEQ_FUNC(SEQD_BG_7,           "\033[4%dm",       col)
-MAKE_SEQ_FUNC(SEQD_FG_B7,          "\033[9%dm",       col)
-MAKE_SEQ_FUNC(SEQD_BG_B7,          "\033[10%dm",      col)
+static inline const char* SEQD_FG_7(int col)                { return ansi_argd_seq("\033[3%dm", col); }
+static inline const char* SEQD_BG_7(int col)                { return ansi_argd_seq("\033[4%dm", col); }
+static inline const char* SEQD_FG_B7(int col)               { return ansi_argd_seq("\033[9%dm", col); }
+static inline const char* SEQD_BG_B7(int col)               { return ansi_argd_seq("\033[10%dm", col); }
 
-MAKE_SEQ_FUNC(SEQD_FG_256,         "\033[38;5;%dm",   col)
-MAKE_SEQ_FUNC(SEQD_BG_256,         "\033[48;5;%dm",   col)
+static inline const char* SEQD_FG_256(int col)              { return ansi_argd_seq("\033[38;5;%dm", col); }
+static inline const char* SEQD_BG_256(int col)              { return ansi_argd_seq("\033[48;5;%dm", col); }
 
-MAKE_SEQ_FUNC(SEQD_FG_RGB,         "\033[38;2;%d;%d;%dm", r, g, b)
-MAKE_SEQ_FUNC(SEQD_BG_RGB,         "\033[48;2;%d;%d;%dm", r, g, b)
-
+static inline const char* SEQD_FG_RGB(int r, int g, int b)  { return ansi_argd_seq("\033[38;2;%d;%d;%dm", r, g, b); }
+static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_seq("\033[48;2;%d;%d;%dm", r, g, b); }
 // Colour constants
 #define SEQD_FG_BLACK               SEQD_ESC "30m"
 #define SEQD_FG_RED                 SEQD_ESC "31m"
@@ -239,28 +250,8 @@ MAKE_SEQ_FUNC(SEQD_BG_RGB,         "\033[48;2;%d;%d;%dm", r, g, b)
 #define SEQD_KEY_PAGE_UP            SEQD_ESC "5~"
 #define SEQD_KEY_PAGE_DOWN          SEQD_ESC "6~"
 
-//////////////////////////////// Seqd polluting /////////////////////////////// 
-#ifndef SEQD_DONT_POLLUTE
-
-// TODO
-// TODO: also include functions in this seqd_ prefix if
-
-#endif
-
-
 ////////////////////////// Cross platform functions /////////////////////////// 
 
-// Utility functions
-static inline char* ctos(char c) {      // char to string (null terminated char*)
-    char* s = (char*) malloc(2);
-
-    if (s == NULL)
-        return NULL;
-    
-    s[0] = c;
-    s[1] = '\0';
-    return s;
-}
 
 
 // Buffering sequences to be executed later (when display() is called)
@@ -288,7 +279,7 @@ static inline char* buffer(const char* sequence) {
 
 
     // Calculate sizes
-    int sequence_size = strlen(sequence);   // TODO: strnlen with some SEQD_MAX_BUFFER_SIZE
+    int sequence_size = strnlen(sequence, SEQD_MAX_BUFFER_SIZE);
     
     // Buffer reallocation
     seqdbuf = realloc(seqdbuf, seqdbuf_size + sequence_size);
@@ -367,7 +358,7 @@ static inline char* get_input(int max_size) {
 
 // Cursor/console commands
 
-void get_terminal_size(int* width, int* height) {
+static inline void get_terminal_size(int* width, int* height) {
     if (!seqdraw)                           // Only works in raw mode, this variable is defined 
         return;                             // later on next to the functions for setting raw
 
@@ -402,9 +393,6 @@ void get_terminal_size(int* width, int* height) {
             *height = row;
         }
     }
-}
-
-int set_cursor(int row, int col) {
 }
 
 ///////////////////////// Platform specific functions ///////////////////////// 
@@ -512,9 +500,9 @@ static inline char keypress() {
         // Read char from stdin
         struct pollfd fds;
         fds.fd = STDIN_FILENO; 
-        fds.events = POLLIN;        // FIXME: returns a lot of newlines
+        fds.events = POLLIN;
 
-        if (poll(&fds, 1, 100)) {   // TODO: replace timeout with SEQD_KEYPRESS_TIMEOUT
+        if (poll(&fds, 1, SEQD_KEYBOARD_TIMEOUT)) {
             char c;
             ssize_t n = read(STDIN_FILENO, &c, 1);
 
@@ -523,15 +511,6 @@ static inline char keypress() {
         }
 
         return 0;
-
-//        ssize_t c;ret = poll(&fds, 1, 10);
-
-//        read(STDIN_FILENO, &c, 1); // FIXME: this is blocking
-
-        // Checking for error
-//        if (c < 0)
-//            perror("Character read (keypress)");
-//        return (char) c;
 
     #endif
 
