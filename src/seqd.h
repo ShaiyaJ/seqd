@@ -21,30 +21,6 @@
     #include <unistd.h>
 #endif
 
-// Utility functions
-static inline char* ctos(char c) {      // char to string (null terminated char*)
-    char* s = (char*) malloc(2);
-
-    if (s == NULL)
-        return NULL;
-    
-    s[0] = c;
-    s[1] = '\0';
-    return s;
-}
-
-static inline const char* ansi_argd_seq(char* fmt, ...) {   // Takes a format and argument list to match to an escape sequence
-    // Get args
-    va_list args;
-    va_start(args, fmt);
-
-    // Write to buffer
-    static char buf[32];
-
-    vsnprintf(buf, 32, fmt, args);   
-    return buf;
-}
-
 ///////////////////////////////////// Docs //////////////////////////////////// 
 // Some reference documentation for you. Most of the functions do exactly as //
 // they say on the tin.                                                      //
@@ -58,6 +34,10 @@ static inline const char* ansi_argd_seq(char* fmt, ...) {   // Takes a format an
 // perspective of a reference it makes more sense to put them above the      //
 // functions.                                                                //
 ///////////////////////////////////////////////////////////////////////////////
+
+// Utility functions (intended for library use, not user use)
+static inline const char* ansi_argd_seq(const char* fmt, ...);          // "Registers" a new SEQD_ command that takes args
+static inline char* ctos(char c);                                       // Turns a single char into a null terminated char*
 
 // Global variables                                                     // If you do not use seqd for your entire program, you may want to free() these at some point.
 char* seqdbuf = NULL;                                                   // For use in display and buffered commands
@@ -111,15 +91,19 @@ static inline void unset_raw_mode();                                    // *Turn
 #define SEQD_MAX_BUFFER_SIZE 1024                                       // Decides maximum input size for certain functions
 #endif
 
+#ifndef SEQD_STATIC_BUFFER_SIZE                                         // Static buffer used for ansi_argd_seq (any function starting with SEQD_ that takes a value)
+#define SEQD_STATIC_BUFFER_SIZE 32
+#endif
+
+#ifndef SEQD_STATIC_BUFFER_COUNT                                        // Static buffer used for ansi_argd_seq (any function starting with SEQD_ that takes a value)
+#define SEQD_STATIC_BUFFER_COUNT 8
+#endif
+
 #ifndef SEQD_KEYBOARD_TIMEOUT
 #define SEQD_KEYBOARD_TIMEOUT 100                                       // Maxmimum milliseconds that nonblocking keypress() polls for
 #endif
 
 //////////////////////////////// ANSI constants /////////////////////////////// 
-// You have some configuration you can do with the constants. If you define  //
-// SEQD_DONT_POLLUTE then every constant will be prefixed with SEQD_,        //
-// otherwise seqd will use more common words for its constants.              //
-///////////////////////////////////////////////////////////////////////////////
 
 #define SEQD_ESC                    "\033["
 #define SEQD_RESET                  SEQD_ESC "0m"
@@ -216,11 +200,6 @@ static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_s
 #define SEQD_BG_BRIGHT_WHITE        SEQD_ESC "107m"
 
 ///////////////////////////// Useful key constants //////////////////////////// 
-// You have some configuration you can do with the constants. If you define  //
-// SEQD_DONT_POLLUTE then every constant will be prefixed with SEQD_,        //
-// otherwise seqd will use more common words for its constants.              //
-///////////////////////////////////////////////////////////////////////////////
-
 
 #define SEQD_KEY_CTRL_PLUS_(k)      ((k) & 0x1F)        // Macro function for "Ctrl + key` - in raw mode this shows up as "key-64" (only for a-z)
 #define SEQD_KEY_ALT_PLUS_(k)       ESC k               // Macro function for "Alt + key` - in raw mode this shows up as ESC + key
@@ -249,6 +228,35 @@ static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_s
 #define SEQD_KEY_END                SEQD_ESC "F"
 #define SEQD_KEY_PAGE_UP            SEQD_ESC "5~"
 #define SEQD_KEY_PAGE_DOWN          SEQD_ESC "6~"
+
+////////////////////////////// Utility functions //////////////////////////////
+static inline char* ctos(char c) {      // char to string (null terminated char*)
+    char* s = (char*) malloc(2);
+
+    if (s == NULL)
+        return NULL;
+    
+    s[0] = c;
+    s[1] = '\0';
+    return s;
+}
+
+static inline const char* ansi_argd_seq(const char* fmt, ...) {   // Takes a format and argument list to match to an escape sequence
+    // Get target buffer 
+    static char bufs[SEQD_STATIC_BUFFER_COUNT][SEQD_STATIC_BUFFER_SIZE]; // Avoids a bug where execute("...", "...") will rewrite the same buffer 
+    static int index = 0;
+    
+    char* buf = bufs[index];
+    index = (index + 1) % SEQD_STATIC_BUFFER_COUNT;
+
+    // Get args and write to the buffer
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, 32, fmt, args);   
+    va_end(args);
+    
+    return buf;
+}
 
 ////////////////////////// Cross platform functions /////////////////////////// 
 
