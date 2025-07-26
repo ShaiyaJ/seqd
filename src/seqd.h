@@ -36,8 +36,9 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // Utility functions (intended for library use, not user use)
+static inline char* ctos(char c);                                       // Turns a single char into a null terminated char*, returns NULL on failure
+static inline void deinit();                                            // Frees memory related to buffers, and input buffers
 static inline const char* ansi_argd_seq(const char* fmt, ...);          // "Registers" a new SEQD_ command that takes args
-static inline char* ctos(char c);                                       // Turns a single char into a null terminated char*
 
 // Global variables                                                     // If you do not use seqd for your entire program, you may want to free() these at some point.
 char* seqdbuf = NULL;                                                   // For use in display and buffered commands
@@ -50,11 +51,6 @@ bool seqdraw = false;                                                   // For u
 #else
     struct termios seqdterm;
 #endif
-
-
-// Utilities
-static inline char* ctos(char c);                                       // Converts a char `c` to a null terminated string, returns NULL if failed
-
 
 
 // Input
@@ -201,15 +197,11 @@ static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_s
 
 ///////////////////////////// Useful key constants //////////////////////////// 
 
-#define SEQD_KEY_CTRL_PLUS_(k)      ((k) & 0x1F)        // Macro function for "Ctrl + key` - in raw mode this shows up as "key-64" (only for a-z)
-#define SEQD_KEY_ALT_PLUS_(k)       ESC k               // Macro function for "Alt + key` - in raw mode this shows up as ESC + key
-#define SEQD_KEY_SHIFT_PLUS_(k)     ((k) ^ 0x20)        // Macro function for "Shift + key` - in raw mode this shows up as uppercase, doesn't work for some keys
+#define SEQD_KEY_CTRL_PLUS_(k)      ((k) & 0x1F)        // Macro function for "Ctrl + key` - in raw mode this shows up as "key-64" (only for a-z)   // TODO: ansi_argd_seq
 
-#define SEQD_KEY_CTRL               0x01
-#define SEQD_KEY_SHIFT              0x02
-#define SEQD_KEY_ALT                0x04
-#define SEQD_KEY_ALTGR              0x08
-#define SEQD_KEY_SUPER              0x10
+#define SEQD_KEY_SHIFT_PLUS_(k)     ((k) ^ 0x20)        // Macro function for "Shift + key` - in raw mode this shows up as uppercase, doesn't work for some keys // TODO: ansi_argd_seq
+
+#define SEQD_KEY_ALT_PLUS_(k)       SEQD_ESC (k)        // TODO: implement keypress_ex that can detect this
 
 #define SEQD_KEY_ESC                '\x1B'
 #define SEQD_KEY_BACKSPACE          '\x7F'
@@ -217,17 +209,17 @@ static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_s
 #define SEQD_KEY_ENTER              '\n'
 #define SEQD_KEY_RETURN             '\n'
 
-#define SEQD_KEY_UP                 SEQD_ESC "A"
-#define SEQD_KEY_DOWN               SEQD_ESC "B"
-#define SEQD_KEY_RIGHT              SEQD_ESC "C"
-#define SEQD_KEY_LEFT               SEQD_ESC "D"
+#define SEQD_KEY_UP                 SEQD_ESC "A"        // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_DOWN               SEQD_ESC "B"        // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_RIGHT              SEQD_ESC "C"        // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_LEFT               SEQD_ESC "D"        // TODO: implement keypress_ex that can detect this
 
-#define SEQD_KEY_INSERT             SEQD_ESC "2~"
-#define SEQD_KEY_DELETE             SEQD_ESC "3~"
-#define SEQD_KEY_HOME               SEQD_ESC "H"
-#define SEQD_KEY_END                SEQD_ESC "F"
-#define SEQD_KEY_PAGE_UP            SEQD_ESC "5~"
-#define SEQD_KEY_PAGE_DOWN          SEQD_ESC "6~"
+#define SEQD_KEY_INSERT             SEQD_ESC "2~"       // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_DELETE             SEQD_ESC "3~"       // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_HOME               SEQD_ESC "H"        // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_END                SEQD_ESC "F"        // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_PAGE_UP            SEQD_ESC "5~"       // TODO: implement keypress_ex that can detect this
+#define SEQD_KEY_PAGE_DOWN          SEQD_ESC "6~"       // TODO: implement keypress_ex that can detect this
 
 ////////////////////////////// Utility functions //////////////////////////////
 static inline char* ctos(char c) {      // char to string (null terminated char*)
@@ -239,6 +231,19 @@ static inline char* ctos(char c) {      // char to string (null terminated char*
     s[0] = c;
     s[1] = '\0';
     return s;
+}
+
+static inline void deinit() {
+    seqdbuf_size = 0;
+    if (seqdbuf != NULL) {
+        free(seqdbuf);
+        seqdbuf = NULL;
+    }
+    
+    if (seqdibuf != NULL) {
+        free(seqdibuf);
+        seqdibuf = NULL; 
+    }
 }
 
 static inline const char* ansi_argd_seq(const char* fmt, ...) {   // Takes a format and argument list to match to an escape sequence
