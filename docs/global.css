@@ -1,0 +1,75 @@
+* {
+    font-family: monospace;
+    font-size: 16px;
+}
+
+body {
+    margin: auto;
+    padding: 0;
+    width: calc(1ch * 80);
+
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+
+/* Removing defaults */
+
+a {color: inherit; font: inherit;}
+
+
+/* Text styling */
+
+.bold {
+    font-weight: bolder;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+.italic {
+    font-style: italic;
+}
+
+.strikethrough {
+    text-decoration: line-through;
+}
+
+.blink {
+        animation: blinkanim 1s steps(2, end) infinite;
+        visibility: hidden;
+}
+
+@keyframes blinkanim {
+    0% { visibility: hidden; }
+    100% { visibility: visible; }
+}
+
+
+/* Text coloring */
+
+.c30 {color: rgb(0,0,0);}
+body > *, .c40 {background-color: rgb(0,0,0);}
+
+.c31 {color: rgb(128,0,0);}
+.c41 {background-color: rgb(128,0,0);}
+
+.c32 {color: rgb(0,128,0);}
+.c42 {background-color: rgb(0,128,0);}
+
+.c33 {color: rgb(128,128,0);}
+.c43 {background-color: rgb(128,128,0);}
+
+.c34 {color: rgb(0,0,128);}
+.c44 {background-color: rgb(0,0,128);}
+
+.c35 {color: rgb(128,0,128);}
+.c45 {background-color: rgb(128,0,128);}
+
+.c36 {color: rgb(0,128,128);}
+.c46 {background-color: rgb(0,128,128);}
+
+body > *, .c37 {color: rgb(192,192,192);}
+.c47 {background-color: rgb(192,192,192);}
+

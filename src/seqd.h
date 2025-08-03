@@ -40,7 +40,7 @@ static inline char* ctos(char c);                                       // Turns
 static inline void deinit();                                            // Frees memory related to buffers, and input buffers
 static inline const char* ansi_argd_seq(const char* fmt, ...);          // "Registers" a new SEQD_ command that takes args
 
-// Global variables                                                     // If you do not use seqd for your entire program, you may want to free() these at some point.
+// Global variables                                                     // If you do not use seqd for your entire program, you may want to free() these at some point, deinit() achieves this
 char* seqdbuf = NULL;                                                   // For use in display and buffered commands
 unsigned int seqdbuf_size = 0;                                          // For use in display and buffered commands
 char* seqdibuf = NULL;                                                  // For use in input buffers 
@@ -70,7 +70,7 @@ static inline void null_terminated_immediates(const char* first, ...);  // Varia
 
 
 // Cursor manipulation
-static inline void get_terminal_size(int* width, int* height);                         // Returns the width of the terminal in characters, requires raw mode
+static inline void get_terminal_size(int* width, int* height);          // Returns the width of the terminal in characters, requires raw mode
     
 // Setting terminal "raw mode"
 static inline void set_raw_mode();                                      // *Turns on terminal raw mode - in this mode you can perform non-blocking reads on the keyboard
