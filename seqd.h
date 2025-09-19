@@ -29,10 +29,8 @@
 // specific behaviour. They make use of #ifdef _WIN32 to distinguish         //
 // environments that are running Windows.                                    //
 //                                                                           //
-// Below this are two sets of definitions, these are also useful to know.    //
-// They were placed under the docs for clarity in code. However, from the    //
-// perspective of a reference it makes more sense to put them above the      //
-// functions.                                                                //
+// If you think some functions are missing - they might be under the "ANSI   //
+// constants" section.                                                       //
 ///////////////////////////////////////////////////////////////////////////////
 
 // Utility functions (intended for library use, not user use)
@@ -76,9 +74,12 @@ static inline void get_terminal_size(int* width, int* height);          // Retur
 static inline void set_raw_mode();                                      // *Turns on terminal raw mode - in this mode you can perform non-blocking reads on the keyboard
 static inline void unset_raw_mode();                                    // *Turns off terminal raw mode - in this mode the user can exit their text before sending it
 
+
 ///////////////////////// Preprocessor config options ///////////////////////// 
 // Some options that you can #define to alter the behaviour of seqd.         //
 ///////////////////////////////////////////////////////////////////////////////
+
+
 #ifndef SEQD_MAX_GET_LINE_MAXIMUM_ITERATION 
 #define SEQD_MAX_GET_LINE_MAXIMUM_ITERATION 1024                        // Maximum iteration count for get_line_until
 #endif
@@ -99,7 +100,9 @@ static inline void unset_raw_mode();                                    // *Turn
 #define SEQD_KEYBOARD_TIMEOUT 100                                       // Maxmimum milliseconds that nonblocking keypress() polls for
 #endif
 
+
 //////////////////////////////// ANSI constants /////////////////////////////// 
+
 
 #define SEQD_ESC                    "\033["
 #define SEQD_RESET                  SEQD_ESC "0m"
@@ -158,6 +161,7 @@ static inline const char* SEQD_BG_256(int col)              { return ansi_argd_s
 
 static inline const char* SEQD_FG_RGB(int r, int g, int b)  { return ansi_argd_seq("\033[38;2;%d;%d;%dm", r, g, b); }
 static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_seq("\033[48;2;%d;%d;%dm", r, g, b); }
+
 // Colour constants
 #define SEQD_FG_BLACK               SEQD_ESC "30m"
 #define SEQD_FG_RED                 SEQD_ESC "31m"
@@ -195,7 +199,10 @@ static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_s
 #define SEQD_BG_BRIGHT_CYAN         SEQD_ESC "106m"
 #define SEQD_BG_BRIGHT_WHITE        SEQD_ESC "107m"
 
+
+
 ///////////////////////////// Useful key constants //////////////////////////// 
+
 
 #define SEQD_KEY_CTRL_PLUS_(k)      ((k) & 0x1F)        // Macro function for "Ctrl + key` - in raw mode this shows up as "key-64" (only for a-z)   // TODO: ansi_argd_seq
 
@@ -221,7 +228,10 @@ static inline const char* SEQD_BG_RGB(int r, int g, int b)  { return ansi_argd_s
 #define SEQD_KEY_PAGE_UP            SEQD_ESC "5~"       // TODO: implement keypress_ex that can detect this
 #define SEQD_KEY_PAGE_DOWN          SEQD_ESC "6~"       // TODO: implement keypress_ex that can detect this
 
+
 ////////////////////////////// Utility functions //////////////////////////////
+
+
 static inline char* ctos(char c) {      // char to string (null terminated char*)
     char* s = (char*) malloc(2);
 
@@ -232,6 +242,7 @@ static inline char* ctos(char c) {      // char to string (null terminated char*
     s[1] = '\0';
     return s;
 }
+
 
 static inline void deinit() {
     seqdbuf_size = 0;
@@ -245,6 +256,7 @@ static inline void deinit() {
         seqdibuf = NULL; 
     }
 }
+
 
 static inline const char* ansi_argd_seq(const char* fmt, ...) {   // Takes a format and argument list to match to an escape sequence
     // Get target buffer 
@@ -263,6 +275,7 @@ static inline const char* ansi_argd_seq(const char* fmt, ...) {   // Takes a for
     return buf;
 }
 
+
 ////////////////////////// Cross platform functions /////////////////////////// 
 
 
@@ -276,6 +289,7 @@ static inline void display() {
     fputs(seqdbuf, stdout);
     fflush(stdout);
 }
+
 
 static inline char* buffer(const char* sequence) {
     if (seqdbuf == NULL) {                  // If seqdbuf hasn't been allocated, allocate it.
@@ -308,6 +322,7 @@ static inline char* buffer(const char* sequence) {
     return seqdbuf;
 }
 
+
 static inline void null_terminated_buffers(const char* first, ...) { 
     va_list args;
     va_start(args, first);
@@ -320,7 +335,7 @@ static inline void null_terminated_buffers(const char* first, ...) {
     } while (sequence != NULL);
 }
 
-#define queue(...) null_terminated_buffers(__VA_ARGS__, NULL)          // Asserts NULL termination
+#define queue(...) null_terminated_buffers(__VA_ARGS__, NULL)           // Ensures NULL termination
 
 
 
@@ -344,29 +359,33 @@ static inline void null_terminated_immediates(const char* first, ...) {
     } while (sequence != NULL);
 }
 
-#define execute(...) null_terminated_immediates(__VA_ARGS__, NULL)     // Asserts NULL termination
+#define execute(...) null_terminated_immediates(__VA_ARGS__, NULL)     // Ensures NULL termination
 
 
 
 
 // Input (cross platform)
 
+
 void clear_seqd_input() {
     if (seqdibuf != NULL)
         if (!strchr(seqdibuf, '\n'))
-            while(fgetc(stdin)!='\n');                                  //discard until newline
+            while(fgetc(stdin)!='\n');                                  // Discard until newline
 }
+
 
 static inline char* get_input(int max_size) {
     clear_seqd_input();
     seqdibuf = (char*) realloc(seqdibuf, max_size+1);
-    memset(seqdibuf, 0, max_size+1);                    // Clearing array
+    memset(seqdibuf, 0, max_size+1);                                    // Clearing array
+    
     
     // Read from stdin
     fgets(seqdibuf, max_size+1, stdin);
 
     return seqdibuf;
 }
+
 
 
 // Cursor/console commands
@@ -529,19 +548,13 @@ static inline char keypress() {
 
 }
 
-/////////////////////////////////////////////////////////////////////////////// 
-// There was once a complicated macro definition in the docs    //   |\_     //
-// section and I wanted it to maintain readability. So I drew a //  /.  \/|  //
-// small ASCII cat - which I thought was quite fitting          // <  w` />  //
-// considering what this library is about. But, now that weird  //  \    /   //
-// macro definition is gone I didn't need the padding. I really //  #UvUv#   //
-// didn't want to delete the little guy though, so here he is.  //  ######   //
-///////////////////////////////////////////////////////////////////////////////
+/////////////// 
 //   |\_     //
 //  /.  \/|  //
 // <  w` />  //
-//  \v v/    //
-//  #UvU##   //
+//  \    /   //              Seqd.
+//  #UvUv#   //
 //  ######   //
 ///////////////
+
 #endif
