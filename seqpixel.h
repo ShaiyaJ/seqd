@@ -20,11 +20,17 @@
 // Some reference documentation for seqpixel.                                //
 ///////////////////////////////////////////////////////////////////////////////
 
+
+// Structs
+
 typedef struct {
     charj*** data;
     int width;
     int height;
 } Sprite;                                                               // Sprites are groups of pixels
+
+
+// Main functions
 
 static inline void clear();                                             // Iterates through the back buffer and clears every set pixel 
 static inline void set_pixel(char* pixel, int width, int height);       // Sets a pixel in the back buffer to a particular colour in a particular position
@@ -34,10 +40,19 @@ static inline void draw();                                              // Draws
 static inline void seqpixel_deinit();                                   // Frees the seqpixel buffer
 
 
+// Color functions
+
+static inline const char* colour_inner(...);                            // Inside logic for colour()     
+#define colour(...) colour_inner(__VA_ARGS__, NULL)                     // Takes either 1 or 3 chars (1 for 8, 16 and 256 colour - 3 for true RGB)
+
+                            
+// Variables
+
 char*** seqpixel_front_buffer = NULL;
 char*** seqpixel_back_buffer = NULL;
 int seqpixel_width = 0;
 int seqpixel_height = 0;
+
 
 ///////////////////////////////// Functions /////////////////////////////////// 
 
@@ -114,3 +129,47 @@ static inline void seqpixel_deinit() {
     seqpixel_width = 0;
     seqpixel_height = 0;
 }
+
+static inline const char* colour_inner(...) {
+    char r, g, b = 0;
+    int arg_count = 0;
+
+    // Populate RGB with values
+    va_list args;
+    va_start(args, arg_count);
+
+    char current_arg;
+    while (current_arg = va_arg(args, char)) {
+        if (current_arg == NULL)
+            break;
+
+        switch (arg_count) {
+            case 2:
+                r = current_arg;
+                break;
+            case 1:
+                g = current_arg;
+                break;
+            default:
+                b = current_arg;
+                break;
+        }
+
+        arg_count++;
+    }
+
+    va_end(args);
+
+
+    // Return based on values
+    if (arg_count == 3)         // 3 will be rgb
+        return;
+    else                        // Else is one of the other colour types
+        if (b < 8)
+            return;             // TODO
+        if (b < 16)
+            return;
+        else
+            return;
+}
+
