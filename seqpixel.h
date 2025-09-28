@@ -1,3 +1,6 @@
+#ifndef H_SEQPIXEL
+#define H_SEQPIXEL
+
 /////////////////////////////// Dependencies ////////////////////////////////// 
 #include <stdio.h>
 #include <stdlib.h>
@@ -161,3 +164,4 @@ static inline void seqpixel_deinit() {
     seqpixel_height = 0;
 }
 
+#endif
