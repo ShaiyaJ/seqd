@@ -41,6 +41,7 @@ static inline const char* ansi_argd_seq(const char* fmt, ...);          // "Regi
 // Global variables                                                     // If you do not use seqd for your entire program, you may want to free() these at some point, deinit() achieves this
 char* seqdbuf = NULL;                                                   // For use in display and buffered commands
 unsigned int seqdbuf_size = 0;                                          // For use in display and buffered commands
+unsigned int seqdbuf_used_size = 0;                                     // For use in display and buffered commands
 char* seqdibuf = NULL;                                                  // For use in input buffers 
 bool seqdraw = false;                                                   // For use in set/unset raw mode and keypress
 
@@ -57,7 +58,8 @@ static inline char* get_input(int max_size);                            // Get l
 
 
 // Output
-static inline void display();                                           // Display everything stored in the buffer
+static inline void display_without_consuming();                         // Display everything stored in the buffer without resetting the used size to 0
+static inline void display();                                           // Display everything stored in the buffer and clear the buffer (store '\0' in seqdbuf[0] and set used size to 0)
 static inline char* buffer(const char* sequence);                       // Buffered commands until display is called - sequence must be null terminated
 static inline void null_terminated_buffers(const char* first, ...);     // Variable arguments that are NULL terminated
 /* MACRO queue(x)      null_terminated_buffers(##x, NULL) */            // Macro to call null_termianted_buffers with trailing NULL
@@ -282,7 +284,7 @@ static inline const char* ansi_argd_seq(const char* fmt, ...) {   // Takes a for
 
 // Buffering sequences to be executed later (when display() is called)
 
-static inline void display() {
+static inline void display_without_consuming() {
     if (seqdbuf == NULL)
         return;
 
@@ -290,9 +292,19 @@ static inline void display() {
     fflush(stdout);
 }
 
+static inline void display() {
+    if (seqdbuf == NULL)
+        return;
+
+    display_without_consuming();
+
+    seqdbuf[0] = '\0';
+    seqdbuf_used_size = 0;
+}
+
 
 static inline char* buffer(const char* sequence) {
-    if (seqdbuf == NULL) {                  // If seqdbuf hasn't been allocated, allocate it.
+    if (seqdbuf == NULL) {                          // If seqdbuf hasn't been allocated, allocate it.
         seqdbuf = (char*) malloc(1);
 
         if (seqdbuf == NULL) {
@@ -309,16 +321,19 @@ static inline char* buffer(const char* sequence) {
     int sequence_size = strnlen(sequence, SEQD_MAX_BUFFER_SIZE);
     
     // Buffer reallocation
-    seqdbuf = realloc(seqdbuf, seqdbuf_size + sequence_size);
-
-    if (seqdbuf == NULL) {
-        seqdbuf_size = 0;
-        return NULL;
+    if (seqdbuf_used_size + sequence_size >= seqdbuf_size) {
+        seqdbuf = realloc(seqdbuf, (seqdbuf_size * 2) + sequence_size);
+        seqdbuf_size = (seqdbuf_size * 2) + sequence_size;   // If allocation succeeds then add it to the seqdbuf_size
+        if (seqdbuf == NULL) {
+            seqdbuf_size = 0;
+            return NULL;
+        }
     }
 
-    seqdbuf_size += sequence_size;          // If allocation succeeds then add it to the seqdbuf_size
+    // Concat string
+    strncat(seqdbuf, sequence, sequence_size);
+    seqdbuf_used_size += sequence_size;
 
-    strncat(seqdbuf, sequence, seqdbuf_size);
     return seqdbuf;
 }
 
