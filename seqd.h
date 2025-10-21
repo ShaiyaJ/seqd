@@ -70,7 +70,7 @@ static inline void null_terminated_immediates(const char* first, ...);  // Varia
 
 
 // Cursor manipulation
-static inline void get_terminal_size(int* width, int* height);          // Returns the width of the terminal in characters, requires raw mode
+static inline void get_terminal_size(int* width, int* height);          // *Returns the width of the terminal in characters, requires raw mode
     
 // Setting terminal "raw mode"
 static inline void set_raw_mode();                                      // *Turns on terminal raw mode - in this mode you can perform non-blocking reads on the keyboard
